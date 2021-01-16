@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# log files
+ansible.log
+
+# secrets
+secrets.ini
