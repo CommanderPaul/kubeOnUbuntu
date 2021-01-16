@@ -1,0 +1,10 @@
+---
+
+- name: test skeleton
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: no
+
+  roles:
+    - test
