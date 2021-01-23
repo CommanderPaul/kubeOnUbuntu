@@ -1,0 +1,21 @@
+---
+
+- name: update the cache
+  apt:
+   update_cache: yes
+  register: cache_update
+
+- name: perform autoclean
+  apt:
+    autoclean: yes
+    force_apt_get: yes
+
+- name: perform autoremove
+  apt:
+    autoremove: yes
+    force_apt_get: yes
+
+- name: ensure vim is installed
+  apt:
+   name: vim
+   state: present
