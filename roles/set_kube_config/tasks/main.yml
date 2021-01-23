@@ -1,0 +1,26 @@
+---
+
+# TODO not idempotent 
+# - name: init Kubernetes
+#   command: kubeadm init
+
+
+- name: Make kube directory
+  file:
+    path: /home/kubeAdmin/.kube
+    state: directory
+    mode: '0755'
+
+# have to init first
+- name: Copy kube admin.conf
+  copy:
+    src: /etc/kubernetes/admin.conf
+    remote_src: yes
+    dest: /home/kubeAdmin/.kube/config
+    owner: kubeAdmin
+    group: kubeAdmin
+    # mode: 0???
+
+
+
+
