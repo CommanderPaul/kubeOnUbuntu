@@ -1,0 +1,95 @@
+---
+
+# skipped some steps from kubernetes.io, not sure they are needed?
+# https://kubernetes.io/docs/setup/production-environment/container-runtimes/#docker
+# preflight says we do need to use systemd and not cgroupfs for docker cgroup driver
+
+
+# docker needs to be controlled by systemd
+
+- name: ensure docker pre requsites
+  apt:
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - gnupg2
+    - software-properties-common
+    state: present
+
+- name: add apt signing key for docker
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+# version specific
+- name: add docker repo
+  apt_repository:
+    repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
+    state: present
+  # register?
+
+# TODO only if repo was added
+- name: update the cache
+  apt:
+   update_cache: yes
+
+- name: ensure docker is installed
+  apt:
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - "containerd.io=1.2.13-2"
+    - "docker-ce=5:19.03.11~3-0~ubuntu-focal"
+    - "docker-ce-cli=5:19.03.11~3-0~ubuntu-focal"
+    state: present
+
+- name: Hold containerd.io upgrades
+  dpkg_selections:
+    name: containerd.io
+    selection: hold
+
+- name: Hold docker-ce upgrades
+  dpkg_selections:
+    name: docker-ce
+    selection: hold
+
+- name: Hold docker-ce-cli upgrades
+  dpkg_selections:
+    name: docker-ce-cli
+    selection: hold
+
+- name: add admin user to docker
+  user:
+    name: kubeAdmin
+    groups:
+      - docker
+    state: present
+
+# TODO fix cgroupfs (docker cgroup driver)
+- name: Configure Docker daemon
+  copy:
+    content: |
+      {
+        "exec-opts": ["native.cgroupdriver=systemd"],
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "100m"
+        },
+        "storage-driver": "overlay2"
+      }
+    dest: /etc/docker/daemon.json
+
+
+# TODO was this necessary?
+- name: Make docker service directory
+  file:
+    path: /etc/systemd/system/docker.service.d
+    state: directory
+
+- name: Set docker as a service
+  service:
+    name: docker
+    state: started
