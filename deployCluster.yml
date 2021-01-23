@@ -1,0 +1,41 @@
+---
+
+# ansible-playbook deployCluster.yml --ask-pass -- ask-become-pass
+
+- name: Make kubeAdmin
+  hosts: default
+  #connection: local
+  gather_facts: false
+
+  # TODO specify remote user in inventory?
+  remote_user: willi
+  become: yes
+  # requires sshpass on local machine
+  # requires --ask-pass argument 
+  # requires --ask-become-pass argument
+
+  roles:
+    - kubeAdmin
+
+
+
+- name: Configure nodes for kubernetes
+  hosts: default
+  gather_facts: false
+  remote_user: kubeAdmin
+  become: yes
+  vars:
+
+  roles:
+    - update_and_install
+    - install_docker
+    - install_kubernetes
+    - set_kube_config
+
+# - name: Continue as non root
+#   hosts: default
+#   gather_facts: false
+#   remote_user: kubeAdmin
+#   become: no
+#   roles:
+#     - set_kube_config
