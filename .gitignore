@@ -1,3 +1,9 @@
+# log files
+ansible.log
+
+# secrets
+secrets.ini
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
