@@ -1,9 +1,29 @@
 ---
 
-- name: update the cache
+- name: set persistent node hostname
+  replace:
+    path: /etc/hosts
+    regexp: '(\s+){{ ansible_hostname }}(\s+.*)?'
+    replace: " {{ new_hostname }}"
+  when: new_hostname != ansible_hostname
+  register: set_hostname
+
+- name: set current node hostname
+  command: hostnamectl set-hostname {{ new_hostname }}
+  when: new_hostname != ansible_hostname
+
+- name: update the cache if older than 6 hours
   apt:
-   update_cache: yes
-  register: cache_update
+    cache_valid_time: 21600
+
+- name: upgrade
+  apt:
+    upgrade: "True"
+
+- name: ensure vim is installed
+  apt:
+    name: vim
+    state: present
 
 - name: perform autoclean
   apt:
@@ -14,8 +34,3 @@
   apt:
     autoremove: yes
     force_apt_get: yes
-
-- name: ensure vim is installed
-  apt:
-   name: vim
-   state: present
