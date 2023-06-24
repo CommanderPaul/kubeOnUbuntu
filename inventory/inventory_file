@@ -1,0 +1,5 @@
+[raspberries]
+192.168.1.120    new_hostname=kube-controller
+192.168.1.143    new_hostname=kube-node01
+192.168.1.162    new_hostname=kube-node02
+192.168.1.166    new_hostname=kube-node03
