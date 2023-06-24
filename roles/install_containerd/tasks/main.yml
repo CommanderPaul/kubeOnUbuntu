@@ -1,0 +1,99 @@
+---
+
+# TODO push containerd version to vars on play
+# TODO abstract out all versions and variables
+
+- name: download containerd with checksum
+  get_url:
+    url: https://github.com/containerd/containerd/releases/download/v1.7.2/containerd-1.7.2-linux-arm64.tar.gz
+    dest: /tmp/containerd-1.7.2-linux-arm64.tar.gz
+    checksum: sha256:https://github.com/containerd/containerd/releases/download/v1.7.2/containerd-1.7.2-linux-arm64.tar.gz.sha256sum
+    mode: '0755'
+
+- name: extract containerd to /usr/local
+  ansible.builtin.unarchive:
+    remote_src: true
+    src: /tmp/containerd-1.7.2-linux-arm64.tar.gz
+    dest: /usr/local
+
+- name: create systemd service directory if it does not exist
+  file:
+    path: /usr/local/lib/systemd/system
+    state: directory
+    mode: '0755'
+
+- name: download containerd.service unit file
+  get_url:
+    url: https://raw.githubusercontent.com/containerd/containerd/main/containerd.service
+    dest: /usr/local/lib/systemd/system/containerd.service
+    mode: '0755'
+
+- name: enable and start containerd
+  systemd:
+    state: restarted
+    daemon_reload: true
+    enabled: true
+    name: containerd
+
+- name: update the cache if older than 6 hours
+  apt:
+    cache_valid_time: 21600
+
+- name: ensure runc is installed
+  apt:
+    name: runc
+
+- name: download cni plugin with checksum
+  get_url:
+    url: https://github.com/containernetworking/plugins/releases/download/v1.3.0/cni-plugins-linux-arm64-v1.3.0.tgz
+    dest: /tmp/cni-plugins-linux-arm64-v1.3.0.tgz
+    checksum: sha1:https://github.com/containernetworking/plugins/releases/download/v1.3.0/cni-plugins-linux-arm64-v1.3.0.tgz.sha1
+    mode: '0755'
+
+- name: create cni bin directory if it does not exist
+  file:
+    path: /opt/cni/bin
+    state: directory
+    mode: '0755'
+
+- name: extract cni plugin to /opt/cni/bin
+  ansible.builtin.unarchive:
+    remote_src: true
+    src: /tmp/cni-plugins-linux-arm64-v1.3.0.tgz
+    dest: /opt/cni/bin
+
+# referencing the url for the checksum has issues
+- name: download crictl cli tool for use with containerd
+  get_url:
+    url: https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.26.1/crictl-v1.26.1-linux-arm64.tar.gz
+    dest: /tmp/crictl-v1.26.1-linux-arm64.tar.gz
+    # TODO pull down checksum file as seperate step rather than use hard coded checksum
+    # referencing url for checksum does not work, mirroring issue?
+    checksum: sha256:cfa28be524b5da1a6dded455bb497dfead27b1fd089e1161eb008909509be585
+    mode: '0755'
+
+- name: extract crictl to /usr/local/bin
+  ansible.builtin.unarchive:
+    remote_src: true
+    src: /tmp/crictl-v1.26.1-linux-arm64.tar.gz
+    dest: /usr/local/bin
+
+- name: create containerd config directory if it does not exist
+  file:
+    path: /etc/containerd
+    state: directory
+    mode: '0755'
+
+- name: generate default containerd config file every time
+  shell: containerd config default > /etc/containerd/config.toml
+  changed_when: False
+
+- name: make crictl config file
+  copy:
+    content: |
+      runtime-endpoint: unix:///run/containerd/containerd.sock
+      image-endpoint: unix:///run/containerd/containerd.sock
+      timeout: 2
+      debug: true
+      pull-image-on-create: false
+    dest: /etc/crictl.yaml
