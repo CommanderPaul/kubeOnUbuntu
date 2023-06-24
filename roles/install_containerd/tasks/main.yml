@@ -56,7 +56,7 @@
     mode: '0755'
 
 - name: extract cni plugin to /opt/cni/bin
-  ansible.builtin.unarchive:
+  unarchive:
     remote_src: true
     src: /tmp/cni-plugins-linux-arm64-v1.3.0.tgz
     dest: /opt/cni/bin
@@ -80,7 +80,7 @@
     mode: '0755'
 
 - name: extract crictl to /usr/local/bin
-  ansible.builtin.unarchive:
+  unarchive:
     remote_src: true
     src: /tmp/crictl-v{{ crictl_version }}-linux-arm64.tar.gz
     dest: /usr/local/bin
