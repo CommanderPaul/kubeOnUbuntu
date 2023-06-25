@@ -1,5 +1,14 @@
 ---
 
+- name: set SystemdCgroup to true
+  replace:
+    path: /etc/containerd/config.toml
+    regexp: '(SystemdCgroup = false)'
+    replace: 'SystemdCgroup = true'
+
+# calls for restart of containerd  ?? move to install containerd?
+# TODO restart containerd
+
 - name: uninstall dphys-swapfile
   apt:
     name: dphys-swapfile
@@ -20,12 +29,25 @@
     enabled: no
   when: swap_present.stdout != ""
 
+- name: update the cache if older than 6 hours
+  apt:
+    cache_valid_time: 21600
+
+- name: install kube pre-requsites
+  apt:
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    state: present
+
 - name: add apt signing key for kubernetes
   apt_key:
     url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
     state: present
 
-# doesn't like focal, xenial works
 - name: add kubernetes repo
   apt_repository:
     repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
@@ -36,12 +58,12 @@
   apt:
    update_cache: yes
 
-- name: ensure kubeadm is installed
+- name: install kubeadm, kubelet, and kubectl
   apt:
     name: "{{ packages }}"
   vars:
     packages:
-    - kubeadm
-    - kubelet
-    - kubectl
+    - kubeadm={{ kubeadm_version }}
+    - kubelet={{ kubelet_version }}
+    - kubectl={{ kubectl_version }}
     state: present
