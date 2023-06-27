@@ -1,6 +1,11 @@
 ---
 
 # TODO break up long urls
+# TODO hold versions
+# - name: Hold containerd.io upgrades
+#   dpkg_selections:
+#     name: containerd.io
+#     selection: hold
 
 - name: download containerd with checksum
   get_url:
