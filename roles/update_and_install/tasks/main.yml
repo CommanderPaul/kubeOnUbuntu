@@ -3,6 +3,7 @@
 - name: set persistent node hostname
   replace:
     path: /etc/hosts
+    # TODO this may not be right regex, may be grabbing next line with hit
     regexp: '(\s+){{ ansible_hostname }}(\s+.*)?'
     replace: " {{ new_hostname }}"
   when: new_hostname != ansible_hostname
