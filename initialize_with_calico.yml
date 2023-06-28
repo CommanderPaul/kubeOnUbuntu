@@ -54,19 +54,15 @@
   gather_facts: false
   become: yes
   tasks:
-
     - name: kubeadm initialize
       command: kubeadm init --pod-network-cidr=192.168.0.0/16
-
     - name: get join info
       command: kubeadm token create --print-join-command
       register: join_command
-
     - name: dummy host for passing root vars
       add_host:
         name:   root_dummy_host
         join_command: "{{ join_command.stdout }}"
-
     - name: copy config file
       copy:
         remote_src: true
@@ -74,9 +70,11 @@
         dest: "{{ hostvars['kubeAdmin_dummy_host']['kubeAdmin_home_directory'] }}/.kube/config"
         owner: "{{ hostvars['kubeAdmin_dummy_host']['kubeAdmin_username'] }}"
         group: "{{ hostvars['kubeAdmin_dummy_host']['kubeAdmin_usergroup'] }}"
-
-
-
+    - name: copy kube config to local
+      fetch:
+        src: /etc/kubernetes/admin.conf
+        dest: /tmp/config
+        flat: true
 
 - name: install calico
   hosts: controller
@@ -94,8 +92,6 @@
       register: custom_resources_command
       failed_when: ('AlreadyExists' not in custom_resources_command.stderr) and (custom_resources_command.rc == 1)
 
-
-
 - name: join workers
   hosts: workers
   gather_facts: false
@@ -103,8 +99,3 @@
   tasks:
     - name: join worker
       command: "{{ hostvars['root_dummy_host']['join_command'] }}"
-
-# TODO's
-# copy the .kube config file to my local machine
-# configure auto-complete
-# configure alias
