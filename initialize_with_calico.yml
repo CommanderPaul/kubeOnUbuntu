@@ -1,0 +1,110 @@
+---
+# this resets all nodes and configures a new cluster using calico network plugin
+
+- name: kubeadm reset all nodes
+  hosts: raspberries
+  gather_facts: false
+  become: yes
+  tasks:
+    - name: resetting nodes
+      command: kubeadm reset -f
+    - name: remove cni configurations
+      file:
+        path: /etc/cni/net.d
+        state: absent
+    - name: restart containerd to free up network resources
+      systemd:
+        state: restarted
+        daemon_reload: true
+        enabled: true
+        name: containerd
+
+- name: configure controller
+  hosts: controller
+  gather_facts: false
+  become: no
+  tasks:
+    - name: remove kube config if it exists
+      file:
+        path: $HOME/.kube/config
+        state: absent
+    - name: ensure .kube directory exists
+      file:
+        path: $HOME/.kube
+        state: directory
+        mode: '0775'
+    - name: register kubeAdmin home directory
+      command: echo $HOME
+      register: kubeAdmin_home_directory
+    - name: register kubeAdmin user name
+      command: id -un
+      register: kubeAdmin_username
+    - name: register kubeAdmin user group
+      command: id -gn
+      register: kubeAdmin_usergroup
+    - name: dummy host for passing kubeAdmin vars
+      add_host:
+        name:   kubeAdmin_dummy_host
+        kubeAdmin_home_directory: "{{ kubeAdmin_home_directory.stdout }}"
+        kubeAdmin_username:  "{{ kubeAdmin_username.stdout }}"
+        kubeAdmin_usergroup:   "{{ kubeAdmin_usergroup.stdout }}"
+
+- name: initialize controller
+  hosts: controller
+  gather_facts: false
+  become: yes
+  tasks:
+
+    - name: kubeadm initialize
+      command: kubeadm init --pod-network-cidr=192.168.0.0/16
+
+    - name: get join info
+      command: kubeadm token create --print-join-command
+      register: join_command
+
+    - name: dummy host for passing root vars
+      add_host:
+        name:   root_dummy_host
+        join_command: "{{ join_command.stdout }}"
+
+    - name: copy config file
+      copy:
+        remote_src: true
+        src: /etc/kubernetes/admin.conf
+        dest: "{{ hostvars['kubeAdmin_dummy_host']['kubeAdmin_home_directory'] }}/.kube/config"
+        owner: "{{ hostvars['kubeAdmin_dummy_host']['kubeAdmin_username'] }}"
+        group: "{{ hostvars['kubeAdmin_dummy_host']['kubeAdmin_usergroup'] }}"
+
+
+
+
+- name: install calico
+  hosts: controller
+  gather_facts: false
+  become: no
+  tasks:
+    # TODO pull out version
+    - name: install calico tigera-operator
+      command: kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/tigera-operator.yaml
+      register: tigera_operator_command
+      failed_when: ('AlreadyExists' not in tigera_operator_command.stderr) and (tigera_operator_command.rc == 1)
+
+    - name: install calico custom-resources
+      command: kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/custom-resources.yaml
+      register: custom_resources_command
+      failed_when: ('AlreadyExists' not in custom_resources_command.stderr) and (custom_resources_command.rc == 1)
+
+
+
+- name: join workers
+  hosts: workers
+  gather_facts: false
+  become: yes
+  tasks:
+    - name: join worker
+      command: "{{ hostvars['root_dummy_host']['join_command'] }}"
+
+# TODO's
+# copy the .kube config file to my local machine
+# configure auto-complete
+# configure alias
