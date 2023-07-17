@@ -3,7 +3,7 @@ controller
 workers
 
 [controller]
-192.168.1.120    new_hostname=kube-controller
+192.168.1.119    new_hostname=kube-controller
 
 [workers]
 192.168.1.143    new_hostname=kube-node01
