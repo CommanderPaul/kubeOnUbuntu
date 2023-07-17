@@ -1,13 +1,12 @@
 ---
 
-- name: set persistent node hostname
-  replace:
-    path: /etc/hosts
-    # TODO this may not be right regex, may be grabbing next line with hit
-    regexp: '(\s+){{ ansible_hostname }}(\s+.*)?'
-    replace: " {{ new_hostname }}"
-  when: new_hostname != ansible_hostname
-  register: set_hostname
+
+
+- name: turn on preserve_hostname
+  lineinfile:
+    path: /etc/cloud/cloud.cfg
+    regexp: '^preserve_hostname: false'
+    line: 'preserve_hostname: true'
 
 - name: set current node hostname
   command: hostnamectl set-hostname {{ new_hostname }}
@@ -21,10 +20,12 @@
   apt:
     upgrade: "True"
 
-- name: ensure vim is installed
+- name: ensure packages installed
   apt:
-    name: vim
-    state: present
+   pkg:
+   - vim
+   - etcd-client  # todo controller only
+   state: present
 
 - name: perform autoclean
   apt:
